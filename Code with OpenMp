@@ -1,0 +1,89 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <omp.h>
+
+// Function to generate a random matrix of size NXN
+void generateRandomMatrix(int N, int matrix[N][N]) {
+#pragma omp parallel for
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N; ++j) {
+            matrix[i][j] = rand() % 10; // Random values between 0 and 9
+        }
+    }
+}
+
+// Function to perform matrix multiplication A * B and store the result in C
+void matrixMultiply(int N, int A[N][N], int B[N][N], int C[N][N]) {
+#pragma omp parallel for
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N; ++j) {
+            for (int k = 0; k < N; ++k) {
+                C[i][j] += A[i][k] * B[k][j];
+            }
+        }
+    }
+}
+
+// Function to write matrix to a file
+void writeMatrixToFile(int N, int matrix[N][N], const char* filename) {
+    FILE* outputFile = fopen(filename, "w");
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N; ++j) {
+            fprintf(outputFile, "%5d ", matrix[i][j]); // Adjust width for better alignment
+        }
+        fprintf(outputFile, "\n");
+    }
+    fclose(outputFile);
+}
+
+// Function to print matrix
+void printMatrix(int N, int matrix[N][N]) {
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N; ++j) {
+            printf("%5d ", matrix[i][j]); // Adjust width for better alignment
+        }
+        printf("\n");
+    }
+}
+
+int main() {
+    // Define the size of the matrices
+    int N = 3; // You can change this to any desired size
+
+    // Initialize matrices A, B, and C
+    int A[N][N], B[N][N], C[N][N];
+
+    // Seed for random number generation
+    srand((unsigned) time(NULL));
+
+    // Generate random values for matrices A and B
+    generateRandomMatrix(N, A);
+    generateRandomMatrix(N, B);
+
+    // Print matrices A and B
+    printf("Matrix A: \n");
+    printMatrix(N, A);
+
+    printf("\nMatrix B: \n");
+    printMatrix(N, B);
+
+    // Measure execution time for matrix multiplication
+    clock_t start_time = clock();
+    matrixMultiply(N, A, B, C);
+    clock_t end_time = clock();
+
+    // Print the resulting matrix C
+    printf("\nResult Matrix C: \n");
+    printMatrix(N, C);
+
+    // Write the result matrix C to a file
+    writeMatrixToFile(N, C, "output_matrix.txt");
+
+    // Calculate and print the execution time
+    double execution_time = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
+    printf("\nExecution Time: %f seconds\n", execution_time);
+
+    return 0;
+}
+
