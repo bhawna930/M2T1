@@ -1,0 +1,109 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <pthread.h>
+
+// Define a structure to pass parameters to the thread function
+struct ThreadArgs {
+    int startRow;
+    int endRow;
+    int size;
+    int (*matrixA)[3]; // Matrix A
+    int (*matrixB)[3]; // Matrix B
+    int (*matrixC)[3]; // Result Matrix C
+};
+
+// Function to generate a random matrix of size N
+void generateRandomMatrix(int size, int matrix[size][size]) {
+    for (int i = 0; i < size; ++i) {
+        for (int j = 0; j < size; ++j) {
+            matrix[i][j] = rand() % 10; // Random values between 0 and 9
+        }
+    }
+}
+
+// Function to perform matrix multiplication A * B for a specific range of rows
+void* matrixMultiplyThread(void* args) {
+    struct ThreadArgs* threadArgs = (struct ThreadArgs*)args;
+    for (int i = threadArgs->startRow; i <= threadArgs->endRow; ++i) {
+        for (int j = 0; j < threadArgs->size; ++j) {
+            threadArgs->matrixC[i][j] = 0;
+            for (int k = 0; k < threadArgs->size; ++k) {
+                threadArgs->matrixC[i][j] += threadArgs->matrixA[i][k] * threadArgs->matrixB[k][j];
+            }
+        }
+    }
+    pthread_exit(NULL);
+}
+
+int main() {
+    // Define the size of the matrices
+    int size = 3; 
+    // Initialize matrices A, B, and C
+    int matrixA[size][size], matrixB[size][size], matrixC[size][size];
+
+    // Seed for random number generation
+    srand((unsigned)time(NULL));
+
+    // Generate random values for matrices A and B
+    generateRandomMatrix(size, matrixA);
+    generateRandomMatrix(size, matrixB);
+
+    // Print matrices A and B
+    printf("Matrix A: \n");
+    for (int i = 0; i < size; ++i) {
+        for (int j = 0; j < size; ++j) {
+            printf("%d\t", matrixA[i][j]);
+        }
+        printf("\n");
+    }
+
+    printf("\nMatrix B: \n");
+    for (int i = 0; i < size; ++i) {
+        for (int j = 0; j < size; ++j) {
+            printf("%d\t", matrixB[i][j]);
+        }
+        printf("\n");
+    }
+
+    // Start measuring execution time
+    clock_t start = clock();
+
+    // Create threads for parallel matrix multiplication
+    int numThreads = size; // Use one thread per row
+    pthread_t threads[numThreads];
+    struct ThreadArgs threadArgs[numThreads];
+    for (int i = 0; i < numThreads; ++i) {
+        threadArgs[i].startRow = i;
+        threadArgs[i].endRow = i;
+        threadArgs[i].size = size;
+        threadArgs[i].matrixA = matrixA;
+        threadArgs[i].matrixB = matrixB;
+        threadArgs[i].matrixC = matrixC; // Pass a reference to the existing C matrix
+        pthread_create(&threads[i], NULL, matrixMultiplyThread, &threadArgs[i]);
+    }
+
+    // Wait for all threads to finish
+    for (int i = 0; i < numThreads; ++i) {
+        pthread_join(threads[i], NULL);
+    }
+
+    // End measuring execution time
+    clock_t end = clock();
+    double time_spent = (double)(end - start) / CLOCKS_PER_SEC;
+
+    // Print the resulting matrix C
+    printf("\nResult Matrix C: \n");
+    for (int i = 0; i < size; ++i) {
+        for (int j = 0; j < size; ++j) {
+            printf("%d\t", matrixC[i][j]);
+        }
+        printf("\n");
+    }
+
+    // Print the execution time
+    printf("\nExecution Time: %f seconds\n", time_spent);
+
+    return 0;
+}
+
